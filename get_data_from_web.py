@@ -1,5 +1,5 @@
 '''
-outputs data in spreadsheet name: output.xlsx format:
+outputs data in spreadsheet name: output.xlsx structure:
 
 subburb, street, erf, street No, ownersName, Extent, Erfusage
 '''
