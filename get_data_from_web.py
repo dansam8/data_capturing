@@ -11,54 +11,58 @@ from PIL import ImageGrab
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from difflib import SequenceMatcher
+import numpy as np
 
 
-pathToRoadList = '/input.txt'
+pathToRoadList = os.getcwd()+'/input.txt'
 pathToOutput = '/output.xlsx'
 pathToDownloadXls = '/Users/DWDSamuelson/Downloads/StreetOwner.xls'
 suburbSimilarityThreshhold = 0.8
 
 
-class Sudo_scraper:
+class pseudo_scraper:
 
-	def is_pix_yellow(x,y):
+	def __init__(self):
+		self.m = PyMouse()
+		self.k = PyKeyboard()
+
+	def is_pix_yellow(self,x,y):
 		img = np.array(ImageGrab.grab().convert('RGB'))
 		d1,d2,d3 = img[y,x] == [254, 255, 206]
 		return d1 and d2 and d3
 
-	def search(road):
+	def search(self,road):
 		time.sleep(1)
-		m.click(750,400)
+		self.m.click(750,400)
 		time.sleep(1)
 		for i in range(40):
-			k.tap_key('delete')
-		k.type_string(road)
+			self.k.tap_key('delete')
+		self.k.type_string(road)
 		time.sleep(1)
-		k.tap_key('return')
-		time.sleep(8)
 
-	def check_if_result_exists_at(resultnumber = 0):
+	def check_if_result_exists_at(self,resultnumber = 0):
 		y = 270+(resultnumber*37)
 		x = 500
-		m.move(x,y)
+		self.m.move(x,y)
 		time.sleep(0.5)
-		return(yellow(x,y))
+		return(self.is_pix_yellow(x,y))
 
-	def download_result_at(resultnumber=0):
-		m.click(500,(270+resultnumber*37))
-		m.move(600,200)
+	def download_result_at(self,resultnumber=0):
+		self.m.click(500,(270+resultnumber*37))
+		self.m.move(600,200)
 		time.sleep(6)	
-		m.click(1025,200)
+		self.m.click(1025,200)
 		time.sleep(0.2)
-		m.click(1025,200)
+		self.m.click(1025,200)
 	 	time.sleep(15)
-		m.click(1072,197)
-		m.click(1072,197)
+		self.m.click(1072,197)
+		self.m.click(1072,197)
 		time.sleep(1)
-		m.click(1072,198)
+		self.m.click(1072,198)
 		time.sleep(1.5)
-		m.click(1072,198)
-	def exit_results_window():
+		self.m.click(1072,198)
+
+	def exit_results_window(self):
 		time.sleep(2)
 		m.click(920,198)
 
@@ -80,17 +84,21 @@ def opentxt(path,mode='r+a'):
 		if os.path.exists(path):
 			try:
 				f = open(path,mode)
+				return f
 			except Exception as e:
 				print e
 				raw_input("Error opening txt file "+path+" \n error from function opentxt")
+		else:
+			raw_input("can't find input data file")
+
 
 
 def String_difference_value(one,two): # between 0-1
 	return SequenceMatcher(None, one.lower(), two.lower()).ratio()
 
 def split_string_by_delimiter(string, delimiter=','):
-	one = inp[:inp.index(delimiter)].strip()
-	two = inp[inp.index(delimiter)+1:].strip()
+	one = string[:string.index(delimiter)].strip()
+	two = string[string.index(delimiter)+1:].strip()
 	return[one,two]
 
 def remove_file(path):
@@ -127,8 +135,10 @@ def test(pathToDownloadXls,pathToOutput,pathToRoadList):
 
 	check_input_file_structure()
 
-def find_sheet_from_resutls(road,suburb,scraper,suburbSimilarityThreshhold,pathToDownloadXls):#returns true for false
+def find_sheet_from_resutls(road, suburb, suburbSimilarityThreshhold, pathToDownloadXls):#returns true for false
 	count = 0
+	scraper = pseudo_scraper()
+	
 	while True:
 		scraper.search(road)
 		if scraper.check_if_result_exists_at(count):
@@ -151,13 +161,13 @@ def get_data(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThres
 	test(pathToDownloadXls,pathToOutput,pathToRoadList)
 
 	print "test complete"
-	for i in range(5):
-		print "starting scraping in "+5-i
+	for i in range(2):
+		print "starting scraping in "+str(5-i)
 		time.sleep(1)
-
-	sudoScraper = Sudo_scraper()
+	
 
 	inputRoadsFile = opentxt(pathToRoadList)
+	
 
 	for line in inputRoadsFile.readlines():
 		if '##' in line:
@@ -165,17 +175,17 @@ def get_data(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThres
 			exit()
 		else:
 			road,suburb = split_string_by_delimiter(line)
-			if find_sheet_from_resutls(road,suburb,sudoScraper,suburbSimilarityThreshhold,pathToDownloadXls):
+			if find_sheet_from_resutls(road, suburb, suburbSimilarityThreshhold, pathToDownloadXls):
 				print "True "+line
-				f.write("True "+line)
+				inputRoadsFile.write("True "+line)
 				add_data_to_output_sheet()
 			else:
-				print "False "+line+" at line "+get_number_of_rows_in_output_file() # for posibly adding data later
-				f.write("False "+line+"at line "+get_number_of_rows_in_output_file())	
+				print "False "+line+" at line "#+get_number_of_rows_in_output_file() # for posibly adding data later
+				inputRoadsFile.write("False "+line+"at line ")#+get_number_of_rows_in_output_file())	
 
 
 
-
+get_data(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThreshhold)
 
 
 
