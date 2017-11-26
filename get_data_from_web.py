@@ -37,6 +37,8 @@ class pseudo_scraper:
 			self.k.tap_key('delete')
 		self.k.type_string(road)
 		time.sleep(1)
+		self.k.tap_key('return')
+		time.sleep(8)
 
 	def check_if_result_exists_at(self,resultnumber = 0):
 		y = 270+(resultnumber*37)
@@ -62,7 +64,7 @@ class pseudo_scraper:
 
 	def exit_results_window(self):
 		time.sleep(2)
-		m.click(920,198)
+		self.m.click(920,198)
 
 
 def save_array_to_xlsx(path):
@@ -70,7 +72,10 @@ def save_array_to_xlsx(path):
 
 	while True:
 		try:
-			wb = openpyxl.Workbook(path)
+			if os.path.exists(path):
+				wb = openpyxl.load_workbook(path)
+			else:
+				wb = openpyxl.Workbook(path)
 			wb.create_sheet('sheet')
 			sheet = wb.get_sheet_by_name(wb.get_sheet_names()[0])
 			break
@@ -143,37 +148,55 @@ def get_suburb_from_file(path):
 	return st[st.index(',')+2:-1]
 
 
-def check_input_file_structure():
-	pass
+def check_input_file_structure(pathToRoadList):
 
+	def formating_error(message,i):
+		print "formating error "+message+" on line "+str(i+1)
+		exit()
+
+	inputTXTFile = opentxt(pathToRoadList)
+
+	for i, line in enumerate(inputTXTFile.readlines()):
+		if '##' in line:
+			break
+		if not ',' in line:
+			formating_error("no comma",i)
+		if ',' in line[line.index(',')+1:]:
+			formating_error("two commas",i)
+	else:
+		formating_error("no terminating ##",i)
+			
 
 def test(pathToDownloadXls,pathToOutput,pathToRoadList):
 	if os.path.exists(pathToDownloadXls):
 		print "download folder alrealy contains file for downloading "+pathToDownloadXls
 		exit()
 	if os.path.exists(pathToOutput):
-		print "output file already exists "+pathToOutput
-		exit()
+		print "warning output file already exists and will be appended to"+pathToOutput
 	if not os.path.exists(pathToRoadList):
 		print "can't find input roadlists file "+pathToRoadList
 		exit()
 
-	check_input_file_structure()
+	check_input_file_structure(pathToRoadList)
 
 
 def find_sheet_from_resutls(road, suburb, suburbSimilarityThreshhold, pathToDownloadXls):#returns true for false
 	count = 0
 	scraper = pseudo_scraper()
-	
+	scraper.search(road)
+
 	while True:
-		scraper.search(road)
 		if scraper.check_if_result_exists_at(count):
 			scraper.download_result_at(count)
 			actualSuburb = get_suburb_from_file(pathToDownloadXls)
+			
 			if suburbSimilarityThreshhold < String_difference_value(actualSuburb,suburb):
+				scraper.exit_results_window()
 				return True
 		else:
 			break
+		count +=1
+	scraper.exit_results_window()
 	
 	return False
 
@@ -186,9 +209,10 @@ def add_data_to_output_arr(pathToDownloadXls):
 		output_arr_as_temp_storage.append([])
 		for j in range(downloaded_sheet.ncols):
 			output_arr_as_temp_storage[len(output_arr_as_temp_storage)-1].append(str(downloaded_sheet.cell(i,j).value))
+	remove_file(pathToDownloadXls)
 	
 
-def get_data(pathToDownloadXls, pathToOutput, pathToRoadList, suburbSimilarityThreshhold):
+def main(pathToDownloadXls, pathToOutput, pathToRoadList, suburbSimilarityThreshhold):
 
 	test(pathToDownloadXls,pathToOutput,pathToRoadList)
 
@@ -202,7 +226,7 @@ def get_data(pathToDownloadXls, pathToOutput, pathToRoadList, suburbSimilarityTh
 	for line in inputRoadsFile.readlines():
 		if '##' in line:
 			print "complete"
-			exit()
+			break
 		else:
 			road,suburb = split_string_by_delimiter(line)
 			if find_sheet_from_resutls(road, suburb, suburbSimilarityThreshhold, pathToDownloadXls):
@@ -214,10 +238,10 @@ def get_data(pathToDownloadXls, pathToOutput, pathToRoadList, suburbSimilarityTh
 				inputRoadsFile.write("False "+line)
 
 	save_array_to_xlsx(pathToOutput)
+	inputRoadsFile.close()
 
 
-
-get_data(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThreshhold)
+if __name__ == "__main__" :main(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThreshhold)
 
 
 
