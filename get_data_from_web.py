@@ -4,20 +4,18 @@ outputs data in spreadsheet name: output.xlsx structure:
 subburb, street, erf, street No, ownersName, Extent, Erfusage
 '''
 
-import sys, os, time, cv2, xlrd
+import sys, os, time, cv2, xlrd, openpyxl
 from pykeyboard import PyKeyboard
 from pymouse import PyMouse
 from PIL import ImageGrab
-from openpyxl import Workbook
-from openpyxl import load_workbook
 from difflib import SequenceMatcher
 import numpy as np
 
-
 pathToRoadList = os.getcwd()+'/input.txt'
-pathToOutput = '/output.xlsx'
+pathToOutput = os.getcwd()+'/output.xlsx'
 pathToDownloadXls = '/Users/DWDSamuelson/Downloads/StreetOwner.xls'
 suburbSimilarityThreshhold = 0.8
+output_arr_as_temp_storage = []
 
 
 class pseudo_scraper:
@@ -66,6 +64,29 @@ class pseudo_scraper:
 		time.sleep(2)
 		m.click(920,198)
 
+
+def save_array_to_xlsx(path):
+	global output_arr_as_temp_storage
+
+	while True:
+		try:
+			wb = openpyxl.Workbook(path)
+			wb.create_sheet('sheet')
+			sheet = wb.get_sheet_by_name(wb.get_sheet_names()[0])
+			break
+		except Exception as e:
+			print e
+			raw_input("Error save_array_to_xlsx")
+
+	for line in range(len(output_arr_as_temp_storage)):
+		temp = []
+		for cell in range(len(output_arr_as_temp_storage[line])):
+			temp.append(output_arr_as_temp_storage[line][cell])
+		sheet.append(temp)
+
+	wb.save(pathToOutput)
+
+
 def openxls(path,sheetindex=0):
 	while True:
 		if os.path.exists(path):
@@ -75,9 +96,10 @@ def openxls(path,sheetindex=0):
 				return sheet
 			except Exception as e:
 				print e
-				raw_input("Error")
+				raw_input("Error openxls")
 		else:
 			raw_input("file is not at path "+path+" Enter to try again \nerror from function openxls")
+
 
 def opentxt(path,mode='r+a'):
 	while True:
@@ -92,14 +114,15 @@ def opentxt(path,mode='r+a'):
 			raw_input("can't find input data file")
 
 
-
 def String_difference_value(one,two): # between 0-1
 	return SequenceMatcher(None, one.lower(), two.lower()).ratio()
+
 
 def split_string_by_delimiter(string, delimiter=','):
 	one = string[:string.index(delimiter)].strip()
 	two = string[string.index(delimiter)+1:].strip()
 	return[one,two]
+
 
 def remove_file(path):
 	if os.path.exists(path):
@@ -113,10 +136,12 @@ def remove_file(path):
 	else:
 		raw_input("file not at path "+path+" \nerror from function remove_file")
 
+
 def get_suburb_from_file(path):
 	sheet = openxls(path)
 	st = sheet.cell(1,0).value
 	return st[st.index(',')+2:-1]
+
 
 def check_input_file_structure():
 	pass
@@ -135,6 +160,7 @@ def test(pathToDownloadXls,pathToOutput,pathToRoadList):
 
 	check_input_file_structure()
 
+
 def find_sheet_from_resutls(road, suburb, suburbSimilarityThreshhold, pathToDownloadXls):#returns true for false
 	count = 0
 	scraper = pseudo_scraper()
@@ -150,25 +176,29 @@ def find_sheet_from_resutls(road, suburb, suburbSimilarityThreshhold, pathToDown
 			break
 	
 	return False
-def add_data_to_output_sheet():
-	pass
 
-def get_number_of_rows_in_output_file():
-	pass
 
-def get_data(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThreshhold):
+def add_data_to_output_arr(pathToDownloadXls):
+	global output_arr_as_temp_storage
+
+	downloaded_sheet = openxls(pathToDownloadXls)
+	for i in range(6,downloaded_sheet.nrows):
+		output_arr_as_temp_storage.append([])
+		for j in range(downloaded_sheet.ncols):
+			output_arr_as_temp_storage[len(output_arr_as_temp_storage)-1].append(str(downloaded_sheet.cell(i,j).value))
+	
+
+def get_data(pathToDownloadXls, pathToOutput, pathToRoadList, suburbSimilarityThreshhold):
 
 	test(pathToDownloadXls,pathToOutput,pathToRoadList)
 
 	print "test complete"
-	for i in range(2):
+	for i in range(5):
 		print "starting scraping in "+str(5-i)
 		time.sleep(1)
 	
-
 	inputRoadsFile = opentxt(pathToRoadList)
 	
-
 	for line in inputRoadsFile.readlines():
 		if '##' in line:
 			print "complete"
@@ -178,14 +208,17 @@ def get_data(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThres
 			if find_sheet_from_resutls(road, suburb, suburbSimilarityThreshhold, pathToDownloadXls):
 				print "True "+line
 				inputRoadsFile.write("True "+line)
-				add_data_to_output_sheet()
+				add_data_to_output_arr(pathToDownloadXls)
 			else:
-				print "False "+line+" at line "#+get_number_of_rows_in_output_file() # for posibly adding data later
-				inputRoadsFile.write("False "+line+"at line ")#+get_number_of_rows_in_output_file())	
+				print "False "+line
+				inputRoadsFile.write("False "+line)
+
+	save_array_to_xlsx(pathToOutput)
 
 
 
 get_data(pathToDownloadXls,pathToOutput,pathToRoadList,suburbSimilarityThreshhold)
+
 
 
 
